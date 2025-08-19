@@ -95,12 +95,28 @@ function wc_inventory_insights_handle_csv_export()
   $filter_type = sanitize_text_field($_POST['filter_type']);
   $filter_value = sanitize_text_field($_POST['filter_value']);
   $min_stock = isset($_POST['min_stock']) && $_POST['min_stock'] !== '' ? intval($_POST['min_stock']) : null;
+  $export_type = isset($_POST['export_type']) ? sanitize_text_field($_POST['export_type']) : 'all';
+  $selected_products = isset($_POST['selected_products']) ? array_map('intval', $_POST['selected_products']) : array();
 
-  $products = wc_inventory_insights_search_products($filter_type, $filter_value, $min_stock);
+  // Get all products matching the search criteria
+  $all_products = wc_inventory_insights_search_products($filter_type, $filter_value, $min_stock);
+
+  // Filter products based on export type
+  if ($export_type === 'selected' && !empty($selected_products)) {
+    $products = array_filter($all_products, function ($product) use ($selected_products) {
+      return in_array($product['id'], $selected_products);
+    });
+  } else {
+    $products = $all_products;
+  }
+
+  // Generate filename
+  $export_suffix = ($export_type === 'selected') ? 'selected' : 'all';
+  $filename = 'inventory-insights-' . $export_suffix . '-' . date('Y-m-d-H-i-s') . '.csv';
 
   // Set headers for CSV download
   header('Content-Type: text/csv');
-  header('Content-Disposition: attachment; filename="inventory-insights-' . date('Y-m-d-H-i-s') . '.csv"');
+  header('Content-Disposition: attachment; filename="' . $filename . '"');
   header('Pragma: no-cache');
   header('Expires: 0');
 
@@ -119,6 +135,12 @@ function wc_inventory_insights_handle_csv_export()
   if ($min_stock !== null) {
     array_splice($csv_headers, 3, 0, __('Stock Needed', 'woocommerce-inventory-insights'));
   }
+
+  // Add export type and count to headers
+  fputcsv($output, array(__('Export Type:', 'woocommerce-inventory-insights'), ucfirst($export_suffix)));
+  fputcsv($output, array(__('Product Count:', 'woocommerce-inventory-insights'), count($products)));
+  fputcsv($output, array(__('Export Date:', 'woocommerce-inventory-insights'), date('Y-m-d H:i:s')));
+  fputcsv($output, array()); // Empty row
 
   // Add CSV headers
   fputcsv($output, $csv_headers);

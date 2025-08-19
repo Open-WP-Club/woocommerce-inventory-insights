@@ -7,6 +7,8 @@ jQuery(document).ready(function($) {
     
     var currentResults = [];
     var isSearching = false;
+    var recentSearches = [];
+    var maxRecentSearches = 10;
     
     // Initialize the plugin
     initInventoryInsights();
@@ -15,14 +17,138 @@ jQuery(document).ready(function($) {
      * Initialize plugin functionality
      */
     function initInventoryInsights() {
+        loadRecentSearches();
         bindFilterTypeChange();
         bindFormSubmission();
-        bindExportButton();
+        bindExportButtons();
+        bindRecentSearches();
+        bindSortOptions();
+        bindBulkSelection();
     }
     
     /**
-     * Handle filter type change
+     * Load recent searches from localStorage
      */
+    function loadRecentSearches() {
+        try {
+            var stored = localStorage.getItem('wc_inventory_insights_recent_searches');
+            if (stored) {
+                recentSearches = JSON.parse(stored);
+                updateRecentSearchesDropdown();
+            }
+        } catch (e) {
+            recentSearches = [];
+        }
+    }
+    
+    /**
+     * Save recent searches to localStorage
+     */
+    function saveRecentSearches() {
+        try {
+            localStorage.setItem('wc_inventory_insights_recent_searches', JSON.stringify(recentSearches));
+        } catch (e) {
+            // localStorage not available
+        }
+    }
+    
+    /**
+     * Add search to recent searches
+     */
+    function addToRecentSearches(searchData) {
+        // Create search object
+        var search = {
+            filter_type: searchData.filter_type,
+            filter_value: searchData.filter_value,
+            min_stock: searchData.min_stock,
+            label: generateSearchLabel(searchData),
+            timestamp: Date.now()
+        };
+        
+        // Remove if already exists
+        recentSearches = recentSearches.filter(function(item) {
+            return !(item.filter_type === search.filter_type && 
+                    item.filter_value === search.filter_value && 
+                    item.min_stock === search.min_stock);
+        });
+        
+        // Add to beginning
+        recentSearches.unshift(search);
+        
+        // Keep only max number
+        if (recentSearches.length > maxRecentSearches) {
+            recentSearches = recentSearches.slice(0, maxRecentSearches);
+        }
+        
+        saveRecentSearches();
+        updateRecentSearchesDropdown();
+    }
+    
+    /**
+     * Generate human-readable label for search
+     */
+    function generateSearchLabel(searchData) {
+        var filterText = $('#filter_value option:selected').text() || searchData.filter_value;
+        var thresholdText = searchData.min_stock ? ' (threshold: ' + searchData.min_stock + ')' : ' (all products)';
+        return filterText + thresholdText;
+    }
+    
+    /**
+     * Update recent searches dropdown
+     */
+    function updateRecentSearchesDropdown() {
+        var $dropdown = $('#recent-searches-dropdown');
+        var $section = $('#recent-searches-section');
+        
+        if (recentSearches.length > 0) {
+            var options = '<option value="">Select a recent search...</option>';
+            $.each(recentSearches, function(index, search) {
+                options += '<option value="' + index + '">' + escapeHtml(search.label) + '</option>';
+            });
+            $dropdown.html(options);
+            $section.show();
+        } else {
+            $section.hide();
+        }
+    }
+    
+    /**
+     * Bind recent searches functionality
+     */
+    function bindRecentSearches() {
+        // Load recent search
+        $('#load-recent-search').on('click', function() {
+            var selectedIndex = $('#recent-searches-dropdown').val();
+            if (selectedIndex !== '') {
+                var search = recentSearches[parseInt(selectedIndex)];
+                if (search) {
+                    loadSearchIntoForm(search);
+                }
+            }
+        });
+        
+        // Clear search history
+        $('#clear-search-history').on('click', function() {
+            if (confirm('Are you sure you want to clear all recent searches?')) {
+                recentSearches = [];
+                saveRecentSearches();
+                updateRecentSearchesDropdown();
+            }
+        });
+    }
+    
+    /**
+     * Load search data into form
+     */
+    function loadSearchIntoForm(search) {
+        $('#filter_type').val(search.filter_type).trigger('change');
+        
+        // Wait for filter values to load, then set the value
+        setTimeout(function() {
+            $('#filter_value').val(search.filter_value);
+            $('#min_stock').val(search.min_stock || '');
+        }, 500);
+    }
     function bindFilterTypeChange() {
         $('#filter_type').on('change', function() {
             var filterType = $(this).val();
@@ -181,19 +307,123 @@ jQuery(document).ready(function($) {
     function handleSearchSuccess(data) {
         var $resultsContent = $('#results-content');
         var $exportBtn = $('#export-csv-btn');
+        var $sortOptions = $('#sort-options');
+        var $resultsCount = $('#results-count');
         
         currentResults = data.products || [];
         $resultsContent.html(data.html || '<div class="no-results">No results found.</div>');
         
-        // Show export button if we have results
+        // Update results count
+        var countText = currentResults.length === 1 ? 
+            'Found 1 product' : 
+            'Found ' + currentResults.length + ' products';
+        $resultsCount.text(countText);
+        
+        // Show/hide controls based on results
         if (currentResults.length > 0) {
             $exportBtn.show();
+            $sortOptions.show();
+            $('.bulk-actions').hide(); // Hidden until items are selected
+            
+            // Reset sort to default
+            $sortOptions.val('stock_asc');
+            
+            // Reset selection states
+            $('#select-all-checkbox').prop('checked', false).prop('indeterminate', false);
+            $('.product-checkbox').prop('checked', false);
+            updateBulkActionButtons();
+        } else {
+            $exportBtn.hide();
+            $sortOptions.hide();
+            $('.bulk-actions').hide();
         }
+        
+        // Add to recent searches
+        var formData = getFormData();
+        addToRecentSearches(formData);
         
         // Scroll to results
         $('html, body').animate({
             scrollTop: $('#search-results').offset().top - 50
         }, 500);
+    }
+    
+    /**
+     * Update results display (for sorting)
+     */
+    function updateResultsDisplay() {
+        var formData = getFormData();
+        var html = generateResultsTable(currentResults, formData.min_stock);
+        $('#results-content').html(html);
+        
+        // Reset selection states after re-rendering
+        $('#select-all-checkbox').prop('checked', false).prop('indeterminate', false);
+        updateBulkActionButtons();
+    }
+    
+    /**
+     * Generate results table HTML
+     */
+    function generateResultsTable(products, minStock) {
+        if (products.length === 0) {
+            return '<div class="no-results">No results found.</div>';
+        }
+        
+        var html = '<table class="inventory-results-table">';
+        html += '<thead><tr>';
+        html += '<th class="bulk-select-column"><input type="checkbox" id="select-all-checkbox" title="Select All"></th>';
+        html += '<th>Image</th>';
+        html += '<th>Product Name</th>';
+        html += '<th>SKU</th>';
+        html += '<th>Current Stock</th>';
+        
+        if (minStock && minStock !== '') {
+            html += '<th>Stock Needed</th>';
+        }
+        
+        html += '<th>Actions</th>';
+        html += '</tr></thead><tbody>';
+        
+        $.each(products, function(index, product) {
+            html += '<tr data-product-id="' + product.id + '">';
+            html += '<td class="bulk-select-column"><input type="checkbox" class="product-checkbox" value="' + product.id + '"></td>';
+            
+            // Product image
+            html += '<td>';
+            if (product.image_url) {
+                html += '<img src="' + escapeHtml(product.image_url) + '" class="product-image" alt="' + escapeHtml(product.name) + '">';
+            } else {
+                html += '<div class="product-image" style="background: #f0f0f0; display: flex; align-items: center; justify-content: center; color: #999;">No Image</div>';
+            }
+            html += '</td>';
+            
+            // Product name
+            html += '<td><strong>' + escapeHtml(product.name) + '</strong></td>';
+            
+            // SKU
+            html += '<td>' + escapeHtml(product.sku || '-') + '</td>';
+            
+            // Current stock
+            var stockClass = (minStock && minStock !== '' && product.stock_quantity < parseInt(minStock)) ? 'stock-below-threshold' : '';
+            html += '<td><span class="' + stockClass + '">' + product.stock_quantity + '</span></td>';
+            
+            // Stock needed (if threshold set)
+            if (minStock && minStock !== '') {
+                var needed = Math.max(0, parseInt(minStock) - product.stock_quantity);
+                if (needed > 0) {
+                    html += '<td><span class="stock-needed">+' + needed + '</span></td>';
+                } else {
+                    html += '<td>-</td>';
+                }
+            }
+            
+            // Edit link
+            html += '<td><a href="' + escapeHtml(product.edit_url) + '" class="button button-small">Edit Product</a></td>';
+            html += '</tr>';
+        });
+        
+        html += '</tbody></table>';
+        return html;
     }
     
     /**
@@ -214,22 +444,43 @@ jQuery(document).ready(function($) {
     /**
      * Handle CSV export
      */
-    function bindExportButton() {
+    function bindExportButtons() {
+        // Export all products
         $(document).on('click', '#export-csv-btn', function() {
             if (currentResults.length === 0) {
                 showError('No data to export.');
                 return;
             }
-            
-            exportToCSV();
+            exportToCSV('all');
         });
+        
+        // Export selected products
+        $(document).on('click', '#export-selected-btn', function() {
+            var selectedIds = getSelectedProductIds();
+            if (selectedIds.length === 0) {
+                showError('Please select products to export.');
+                return;
+            }
+            exportToCSV('selected');
+        });
+    }
+    
+    /**
+     * Get selected product IDs
+     */
+    function getSelectedProductIds() {
+        var selectedIds = [];
+        $('.product-checkbox:checked').each(function() {
+            selectedIds.push($(this).val());
+        });
+        return selectedIds;
     }
     
     /**
      * Export current results to CSV
      */
-    function exportToCSV() {
-        var $btn = $('#export-csv-btn');
+    function exportToCSV(exportType) {
+        var $btn = exportType === 'selected' ? $('#export-selected-btn') : $('#export-csv-btn');
         var originalText = $btn.text();
         
         // Set loading state
@@ -247,6 +498,16 @@ jQuery(document).ready(function($) {
         $form.append(createHiddenInput('filter_type', $('#filter_type').val()));
         $form.append(createHiddenInput('filter_value', $('#filter_value').val()));
         $form.append(createHiddenInput('min_stock', $('#min_stock').val()));
+        $form.append(createHiddenInput('export_type', exportType));
+        
+        // Add selected product IDs if exporting selected
+        if (exportType === 'selected') {
+            var selectedIds = getSelectedProductIds();
+            $.each(selectedIds, function(index, id) {
+                $form.append(createHiddenInput('selected_products[]', id));
+            });
+        }
+        
         $form.append(createHiddenInput('nonce', wcInventoryInsights.nonce));
         
         // Submit form and cleanup

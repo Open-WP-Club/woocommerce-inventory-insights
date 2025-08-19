@@ -21,6 +21,18 @@ function wc_inventory_insights_admin_page()
     <h1><?php _e('WooCommerce Inventory Insights', 'woocommerce-inventory-insights'); ?></h1>
     <p><?php _e('Monitor product stock levels by tags and attributes to help with wholesale ordering decisions.', 'woocommerce-inventory-insights'); ?></p>
 
+    <!-- Recent Searches -->
+    <div id="recent-searches-section" style="display: none;">
+      <h3><?php _e('Recent Searches', 'woocommerce-inventory-insights'); ?></h3>
+      <div class="recent-searches-controls">
+        <select id="recent-searches-dropdown">
+          <option value=""><?php _e('Select a recent search...', 'woocommerce-inventory-insights'); ?></option>
+        </select>
+        <button type="button" class="button" id="load-recent-search"><?php _e('Load Search', 'woocommerce-inventory-insights'); ?></button>
+        <button type="button" class="button" id="clear-search-history"><?php _e('Clear History', 'woocommerce-inventory-insights'); ?></button>
+      </div>
+    </div>
+
     <div class="wc-inventory-insights-search-form">
       <form id="inventory-search-form">
         <table class="form-table">
@@ -67,10 +79,29 @@ function wc_inventory_insights_admin_page()
 
     <div id="search-results" style="display: none;">
       <div class="results-header">
-        <h2><?php _e('Search Results', 'woocommerce-inventory-insights'); ?></h2>
-        <button type="button" class="button" id="export-csv-btn" style="display: none;">
-          <?php _e('Export to CSV', 'woocommerce-inventory-insights'); ?>
-        </button>
+        <div class="results-title-section">
+          <h2><?php _e('Search Results', 'woocommerce-inventory-insights'); ?></h2>
+          <span id="results-count" class="results-count"></span>
+        </div>
+        <div class="results-controls">
+          <label for="sort-options"><?php _e('Sort by:', 'woocommerce-inventory-insights'); ?></label>
+          <select id="sort-options" style="display: none;">
+            <option value="stock_asc"><?php _e('Stock (Low to High)', 'woocommerce-inventory-insights'); ?></option>
+            <option value="stock_desc"><?php _e('Stock (High to Low)', 'woocommerce-inventory-insights'); ?></option>
+            <option value="name_asc"><?php _e('Product Name (A-Z)', 'woocommerce-inventory-insights'); ?></option>
+            <option value="name_desc"><?php _e('Product Name (Z-A)', 'woocommerce-inventory-insights'); ?></option>
+            <option value="sku_asc"><?php _e('SKU (A-Z)', 'woocommerce-inventory-insights'); ?></option>
+            <option value="sku_desc"><?php _e('SKU (Z-A)', 'woocommerce-inventory-insights'); ?></option>
+          </select>
+          <div class="bulk-actions" style="display: none;">
+            <button type="button" class="button" id="select-all-btn"><?php _e('Select All', 'woocommerce-inventory-insights'); ?></button>
+            <button type="button" class="button" id="deselect-all-btn"><?php _e('Deselect All', 'woocommerce-inventory-insights'); ?></button>
+            <button type="button" class="button" id="export-selected-btn"><?php _e('Export Selected', 'woocommerce-inventory-insights'); ?></button>
+          </div>
+          <button type="button" class="button" id="export-csv-btn" style="display: none;">
+            <?php _e('Export All to CSV', 'woocommerce-inventory-insights'); ?>
+          </button>
+        </div>
       </div>
       <div id="results-content"></div>
     </div>
@@ -94,6 +125,7 @@ function wc_inventory_insights_generate_results_html($products, $min_stock)
   $html = '<table class="inventory-results-table">';
   $html .= '<thead>';
   $html .= '<tr>';
+  $html .= '<th class="bulk-select-column"><input type="checkbox" id="select-all-checkbox" title="' . __('Select All', 'woocommerce-inventory-insights') . '"></th>';
   $html .= '<th>' . __('Image', 'woocommerce-inventory-insights') . '</th>';
   $html .= '<th>' . __('Product Name', 'woocommerce-inventory-insights') . '</th>';
   $html .= '<th>' . __('SKU', 'woocommerce-inventory-insights') . '</th>';
@@ -110,7 +142,10 @@ function wc_inventory_insights_generate_results_html($products, $min_stock)
   $html .= '<tbody>';
 
   foreach ($products as $product) {
-    $html .= '<tr>';
+    $html .= '<tr data-product-id="' . esc_attr($product['id']) . '">';
+
+    // Bulk selection checkbox
+    $html .= '<td class="bulk-select-column"><input type="checkbox" class="product-checkbox" value="' . esc_attr($product['id']) . '"></td>';
 
     // Product image
     $html .= '<td>';
