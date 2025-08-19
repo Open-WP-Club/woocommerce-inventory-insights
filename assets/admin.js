@@ -149,6 +149,10 @@ jQuery(document).ready(function($) {
             $('#min_stock').val(search.min_stock || '');
         }, 500);
     }
+    
+    /**
+     * Handle filter type change
+     */
     function bindFilterTypeChange() {
         $('#filter_type').on('change', function() {
             var filterType = $(this).val();
@@ -206,6 +210,124 @@ jQuery(document).ready(function($) {
         });
         
         $filterValue.html(options);
+    }
+    
+    /**
+     * Bind sort options
+     */
+    function bindSortOptions() {
+        $('#sort-options').on('change', function() {
+            var sortBy = $(this).val();
+            if (currentResults.length > 0) {
+                sortResults(sortBy);
+                updateResultsDisplay();
+            }
+        });
+    }
+    
+    /**
+     * Sort results array
+     */
+    function sortResults(sortBy) {
+        currentResults.sort(function(a, b) {
+            switch (sortBy) {
+                case 'stock_asc':
+                    return a.stock_quantity - b.stock_quantity;
+                case 'stock_desc':
+                    return b.stock_quantity - a.stock_quantity;
+                case 'name_asc':
+                    return a.name.localeCompare(b.name);
+                case 'name_desc':
+                    return b.name.localeCompare(a.name);
+                case 'sku_asc':
+                    return (a.sku || '').localeCompare(b.sku || '');
+                case 'sku_desc':
+                    return (b.sku || '').localeCompare(a.sku || '');
+                default:
+                    return 0;
+            }
+        });
+    }
+    
+    /**
+     * Update bulk action buttons visibility
+     */
+    function updateBulkActionButtons() {
+        var checkedCount = $('.product-checkbox:checked').length;
+        var $bulkActions = $('.bulk-actions');
+        var $exportSelected = $('#export-selected-btn');
+        
+        if (checkedCount > 0) {
+            $bulkActions.show();
+            $exportSelected.text('Export Selected (' + checkedCount + ')');
+        } else {
+            $bulkActions.hide();
+        }
+    }
+    
+    /**
+     * Update row selection visual state
+     */
+    function updateRowSelection() {
+        $('.product-checkbox').each(function() {
+            var $row = $(this).closest('tr');
+            if ($(this).prop('checked')) {
+                $row.addClass('selected');
+            } else {
+                $row.removeClass('selected');
+            }
+        });
+    }
+    
+    /**
+     * Update select all checkbox state
+     */
+    function updateSelectAllCheckbox() {
+        var totalCheckboxes = $('.product-checkbox').length;
+        var checkedCheckboxes = $('.product-checkbox:checked').length;
+        
+        var $selectAll = $('#select-all-checkbox');
+        if (checkedCheckboxes === 0) {
+            $selectAll.prop('indeterminate', false).prop('checked', false);
+        } else if (checkedCheckboxes === totalCheckboxes) {
+            $selectAll.prop('indeterminate', false).prop('checked', true);
+        } else {
+            $selectAll.prop('indeterminate', true).prop('checked', false);
+        }
+    }
+    
+    /**
+     * Bind bulk selection functionality
+     */
+    function bindBulkSelection() {
+        // Select all checkbox in header
+        $(document).on('change', '#select-all-checkbox', function() {
+            var isChecked = $(this).prop('checked');
+            $('.product-checkbox').prop('checked', isChecked);
+            updateRowSelection();
+            updateBulkActionButtons();
+        });
+        
+        // Individual product checkboxes
+        $(document).on('change', '.product-checkbox', function() {
+            updateRowSelection();
+            updateSelectAllCheckbox();
+            updateBulkActionButtons();
+        });
+        
+        // Bulk action buttons
+        $('#select-all-btn').on('click', function() {
+            $('.product-checkbox').prop('checked', true);
+            $('#select-all-checkbox').prop('checked', true);
+            updateRowSelection();
+            updateBulkActionButtons();
+        });
+        
+        $('#deselect-all-btn').on('click', function() {
+            $('.product-checkbox, #select-all-checkbox').prop('checked', false);
+            updateRowSelection();
+            updateBulkActionButtons();
+        });
     }
     
     /**
