@@ -1,0 +1,256 @@
+/**
+ * Admin Styles for WooCommerce Inventory Insights
+ */
+
+/* Search Form Styling */
+.wc-inventory-insights-search-form {
+  background: #fff;
+  border: 1px solid #ccd0d4;
+  border-radius: 4px;
+  padding: 20px;
+  margin: 20px 0;
+}
+
+.wc-inventory-insights-search-form .form-table th {
+  width: 200px;
+  padding-left: 0;
+}
+
+.wc-inventory-insights-search-form .form-table td {
+  padding-left: 0;
+}
+
+.wc-inventory-insights-search-form select,
+.wc-inventory-insights-search-form input[type="number"] {
+  min-width: 300px;
+}
+
+/* Results Header */
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 20px 0 10px 0;
+}
+
+.results-header h2 {
+  margin: 0;
+}
+
+/* Results Table */
+.inventory-results-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border: 1px solid #ccd0d4;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.inventory-results-table th,
+.inventory-results-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+  vertical-align: middle;
+}
+
+.inventory-results-table th {
+  background: #f9f9f9;
+  font-weight: 600;
+  color: #23282d;
+}
+
+.inventory-results-table tbody tr:hover {
+  background: #f9f9f9;
+}
+
+.inventory-results-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Product Image */
+.product-image {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+}
+
+/* Stock Indicators */
+.stock-below-threshold {
+  color: #dc3232;
+  font-weight: 600;
+}
+
+.stock-needed {
+  color: #d63638;
+  background: #fcf0f1;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-block;
+  min-width: 30px;
+  text-align: center;
+}
+
+/* No Results Message */
+.no-results {
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+  background: #f9f9f9;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin: 20px 0;
+}
+
+.no-results::before {
+  content: "📦";
+  display: block;
+  font-size: 48px;
+  margin-bottom: 10px;
+  opacity: 0.5;
+}
+
+/* Button States */
+#search-btn.loading {
+  position: relative;
+  color: transparent;
+}
+
+#search-btn.loading::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 16px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #0073aa;
+  border-radius: 50%;
+  animation: wc-inventory-spin 1s linear infinite;
+}
+
+@keyframes wc-inventory-spin {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+/* Export Button */
+#export-csv-btn {
+  background: #00a32a;
+  border-color: #00a32a;
+  color: #fff;
+}
+
+#export-csv-btn:hover {
+  background: #008a20;
+  border-color: #008a20;
+}
+
+/* Responsive Design */
+@media (max-width: 782px) {
+  .results-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .results-header h2 {
+    margin-bottom: 0;
+  }
+
+  .inventory-results-table {
+    font-size: 14px;
+  }
+
+  .inventory-results-table th,
+  .inventory-results-table td {
+    padding: 8px;
+  }
+
+  .product-image {
+    width: 40px;
+    height: 40px;
+  }
+
+  .wc-inventory-insights-search-form select,
+  .wc-inventory-insights-search-form input[type="number"] {
+    min-width: 100%;
+    max-width: 100%;
+  }
+}
+
+/* Loading State for Results */
+.results-loading {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+.results-loading::before {
+  content: "";
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  margin-bottom: 10px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #0073aa;
+  border-radius: 50%;
+  animation: wc-inventory-spin 1s linear infinite;
+}
+
+/* Error State */
+.wc-inventory-error {
+  background: #fcf0f1;
+  border: 1px solid #d63638;
+  border-radius: 4px;
+  padding: 12px;
+  margin: 20px 0;
+  color: #50575e;
+}
+
+/* Success State */
+.wc-inventory-success {
+  background: #f0f6fc;
+  border: 1px solid #0073aa;
+  border-radius: 4px;
+  padding: 12px;
+  margin: 20px 0;
+  color: #50575e;
+}
+
+/* Table Column Widths */
+.inventory-results-table th:first-child,
+.inventory-results-table td:first-child {
+  width: 70px;
+}
+
+.inventory-results-table th:nth-child(3),
+.inventory-results-table td:nth-child(3) {
+  width: 120px;
+}
+
+.inventory-results-table th:nth-child(4),
+.inventory-results-table td:nth-child(4) {
+  width: 100px;
+}
+
+.inventory-results-table th:nth-child(5),
+.inventory-results-table td:nth-child(5) {
+  width: 100px;
+}
+
+.inventory-results-table th:last-child,
+.inventory-results-table td:last-child {
+  width: 120px;
+}
