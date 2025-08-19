@@ -136,12 +136,6 @@ function wc_inventory_insights_handle_csv_export()
     array_splice($csv_headers, 3, 0, __('Stock Needed', 'woocommerce-inventory-insights'));
   }
 
-  // Add export type and count to headers
-  fputcsv($output, array(__('Export Type:', 'woocommerce-inventory-insights'), ucfirst($export_suffix)));
-  fputcsv($output, array(__('Product Count:', 'woocommerce-inventory-insights'), count($products)));
-  fputcsv($output, array(__('Export Date:', 'woocommerce-inventory-insights'), date('Y-m-d H:i:s')));
-  fputcsv($output, array()); // Empty row
-
   // Add CSV headers
   fputcsv($output, $csv_headers);
 
