@@ -692,6 +692,8 @@ jQuery(document).ready(function($) {
      * Escape HTML characters
      */
     function escapeHtml(text) {
+        // Convert to string first to handle non-string inputs (like integers)
+        var textStr = String(text || '');
         var map = {
             '&': '&amp;',
             '<': '&lt;',
@@ -699,7 +701,7 @@ jQuery(document).ready(function($) {
             '"': '&quot;',
             "'": '&#039;'
         };
-        return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+        return textStr.replace(/[&<>"']/g, function(m) { return map[m]; });
     }
     
     /**
