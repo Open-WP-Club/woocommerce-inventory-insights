@@ -30,7 +30,11 @@ function wc_inventory_insights_admin_page()
         </select>
         <button type="button" class="button" id="load-recent-search"><?php _e('Load Search', 'woocommerce-inventory-insights'); ?></button>
         <button type="button" class="button" id="clear-search-history"><?php _e('Clear History', 'woocommerce-inventory-insights'); ?></button>
+        <button type="button" class="button button-primary" id="load-last-search">
+          <?php _e('Load Last Search', 'woocommerce-inventory-insights'); ?>
+        </button>
       </div>
+      <div id="last-search-preview" class="last-search-preview"></div>
     </div>
 
     <div class="wc-inventory-insights-search-form">

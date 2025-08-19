@@ -99,6 +99,8 @@ jQuery(document).ready(function($) {
     function updateRecentSearchesDropdown() {
         var $dropdown = $('#recent-searches-dropdown');
         var $section = $('#recent-searches-section');
+        var $lastSearchBtn = $('#load-last-search');
+        var $lastSearchPreview = $('#last-search-preview');
         
         if (recentSearches.length > 0) {
             var options = '<option value="">Select a recent search...</option>';
@@ -106,9 +108,17 @@ jQuery(document).ready(function($) {
                 options += '<option value="' + index + '">' + escapeHtml(search.label) + '</option>';
             });
             $dropdown.html(options);
+            
+            // Update last search preview and button
+            var lastSearch = recentSearches[0];
+            $lastSearchPreview.text('Last search: ' + escapeHtml(lastSearch.label));
+            $lastSearchBtn.show();
+            
             $section.show();
         } else {
             $section.hide();
+            $lastSearchBtn.hide();
+            $lastSearchPreview.text('');
         }
     }
     
@@ -116,7 +126,20 @@ jQuery(document).ready(function($) {
      * Bind recent searches functionality
      */
     function bindRecentSearches() {
-        // Load recent search
+        // Load last search directly
+        $('#load-last-search').on('click', function() {
+            if (recentSearches.length > 0) {
+                var lastSearch = recentSearches[0];
+                loadSearchIntoForm(lastSearch);
+                
+                // Auto-execute the search after a brief delay to allow form to populate
+                setTimeout(function() {
+                    $('#inventory-search-form').submit();
+                }, 600);
+            }
+        });
+        
+        // Load recent search from dropdown
         $('#load-recent-search').on('click', function() {
             var selectedIndex = $('#recent-searches-dropdown').val();
             if (selectedIndex !== '') {
