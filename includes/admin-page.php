@@ -144,6 +144,7 @@ function wc_inventory_insights_generate_results_html($products, $min_stock)
   $html .= '<th>' . __('Image', 'woocommerce-inventory-insights') . '</th>';
   $html .= '<th>' . __('Product Name', 'woocommerce-inventory-insights') . '</th>';
   $html .= '<th>' . __('SKU', 'woocommerce-inventory-insights') . '</th>';
+  $html .= '<th>' . __('Categories', 'woocommerce-inventory-insights') . '</th>';
   $html .= '<th>' . __('Current Stock', 'woocommerce-inventory-insights') . '</th>';
 
   // Only show "Stock Needed" column if min_stock is set
@@ -176,6 +177,9 @@ function wc_inventory_insights_generate_results_html($products, $min_stock)
 
     // SKU
     $html .= '<td>' . esc_html($product['sku'] ?: '-') . '</td>';
+
+    // Categories
+    $html .= '<td>' . esc_html($product['categories'] ?: '-') . '</td>';
 
     // Current stock - highlight if below threshold
     $stock_class = ($min_stock > 0 && $product['stock_quantity'] < $min_stock) ? 'stock-below-threshold' : '';

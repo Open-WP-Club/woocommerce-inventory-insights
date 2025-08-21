@@ -583,6 +583,7 @@ jQuery(document).ready(function($) {
         html += '<th>Image</th>';
         html += '<th>Product Name</th>';
         html += '<th>SKU</th>';
+        html += '<th>Categories</th>';
         html += '<th>Current Stock</th>';
         
         if (minStock && minStock !== '') {
@@ -610,6 +611,9 @@ jQuery(document).ready(function($) {
             
             // SKU
             html += '<td>' + escapeHtml(product.sku || '-') + '</td>';
+            
+            // Categories
+            html += '<td>' + escapeHtml(product.categories || '-') + '</td>';
             
             // Current stock
             var stockClass = (minStock && minStock !== '' && product.stock_quantity < parseInt(minStock)) ? 'stock-below-threshold' : '';

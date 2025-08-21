@@ -89,11 +89,16 @@ function wc_inventory_insights_search_products($filter_type, $filter_value, $min
     $should_include = ($min_stock === null) || ($stock_quantity !== null && $stock_quantity < $min_stock);
 
     if ($should_include && $stock_quantity !== null) {
+      // Get product categories
+      $product_categories = wp_get_post_terms($product->get_id(), 'product_cat', array('fields' => 'names'));
+      $categories_list = is_array($product_categories) ? implode(', ', $product_categories) : '';
+
       $products[] = array(
         'id' => $product->get_id(),
         'name' => $product->get_name(),
         'sku' => $product->get_sku(),
         'stock_quantity' => $stock_quantity,
+        'categories' => $categories_list,
         'image_url' => wp_get_attachment_image_url($product->get_image_id(), 'thumbnail'),
         'edit_url' => get_edit_post_link($product->get_id()),
         'needed_quantity' => $min_stock !== null ? max(0, $min_stock - $stock_quantity) : 0,
@@ -200,28 +205,46 @@ function wc_inventory_insights_build_category_hierarchy($categories)
 {
   $hierarchy = array();
   $children = array();
+  $indexed_categories = array();
 
-  // First pass: organize children by parent ID
+  // Index categories by ID for easier lookup
   foreach ($categories as $category) {
+    $indexed_categories[$category->term_id] = $category;
     if ($category->parent != 0) {
       $children[$category->parent][] = $category;
     }
   }
 
-  // Second pass: build hierarchy starting with top-level categories
-  foreach ($categories as $category) {
-    if ($category->parent == 0) { // Top-level category
-      $hierarchy[] = array(
-        'id' => $category->term_id,
-        'name' => $category->name,
-        'level' => 0,
-        'display_name' => $category->name
-      );
+  // Sort children arrays by name
+  foreach ($children as &$child_array) {
+    usort($child_array, function ($a, $b) {
+      return strcmp($a->name, $b->name);
+    });
+  }
 
-      // Add children recursively
-      if (isset($children[$category->term_id])) {
-        wc_inventory_insights_add_category_children_recursive($hierarchy, $children, $category->term_id, 1);
-      }
+  // Build hierarchy starting with top-level categories (sorted by name)
+  $top_level = array();
+  foreach ($categories as $category) {
+    if ($category->parent == 0) {
+      $top_level[] = $category;
+    }
+  }
+
+  usort($top_level, function ($a, $b) {
+    return strcmp($a->name, $b->name);
+  });
+
+  foreach ($top_level as $category) {
+    $hierarchy[] = array(
+      'id' => $category->term_id,
+      'name' => $category->name,
+      'level' => 0,
+      'display_name' => $category->name
+    );
+
+    // Add children recursively
+    if (isset($children[$category->term_id])) {
+      wc_inventory_insights_add_category_children_recursive($hierarchy, $children, $category->term_id, 1);
     }
   }
 

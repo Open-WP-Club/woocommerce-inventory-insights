@@ -168,13 +168,14 @@ function wc_inventory_insights_handle_csv_export()
   $csv_headers = array(
     __('Product Name', 'woocommerce-inventory-insights'),
     __('SKU', 'woocommerce-inventory-insights'),
+    __('Categories', 'woocommerce-inventory-insights'),
     __('Current Stock', 'woocommerce-inventory-insights'),
     __('Product ID', 'woocommerce-inventory-insights')
   );
 
   // Add "Stock Needed" column only if min_stock is set
   if ($min_stock !== null) {
-    array_splice($csv_headers, 3, 0, __('Stock Needed', 'woocommerce-inventory-insights'));
+    array_splice($csv_headers, 4, 0, __('Stock Needed', 'woocommerce-inventory-insights'));
   }
 
   // Add CSV headers
@@ -185,6 +186,7 @@ function wc_inventory_insights_handle_csv_export()
     $csv_row = array(
       $product['name'],
       $product['sku'],
+      $product['categories'],
       $product['stock_quantity'],
     );
 
