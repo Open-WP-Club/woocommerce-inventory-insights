@@ -411,11 +411,16 @@
 
 .inventory-results-table th:nth-child(5),
 .inventory-results-table td:nth-child(5) {
-  width: 100px;
+  width: 150px;
 }
 
 .inventory-results-table th:nth-child(6),
 .inventory-results-table td:nth-child(6) {
+  width: 100px;
+}
+
+.inventory-results-table th:nth-child(7),
+.inventory-results-table td:nth-child(7) {
   width: 100px;
 }
 

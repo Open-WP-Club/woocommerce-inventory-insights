@@ -71,12 +71,31 @@ function wc_inventory_insights_get_categories()
     wp_die('Security check failed');
   }
 
-  $categories = get_terms(array(
+  // Get optional filter parameters to limit categories
+  $filter_type = isset($_POST['filter_type']) ? sanitize_text_field($_POST['filter_type']) : '';
+  $filter_value = isset($_POST['filter_value']) ? sanitize_text_field($_POST['filter_value']) : '';
+
+  $args = array(
     'taxonomy' => 'product_cat',
     'hide_empty' => true,
     'orderby' => 'name',
     'order' => 'ASC',
-  ));
+  );
+
+  // If filter is provided, get categories that contain products with that filter
+  if (!empty($filter_type) && !empty($filter_value)) {
+    $product_ids = wc_inventory_insights_get_filtered_product_ids($filter_type, $filter_value);
+
+    if (!empty($product_ids)) {
+      $args['object_ids'] = $product_ids;
+    } else {
+      // No products found with this filter, return empty
+      wp_send_json_success(array());
+      return;
+    }
+  }
+
+  $categories = get_terms($args);
 
   if (is_wp_error($categories)) {
     wp_send_json_error('Failed to load categories');
@@ -96,6 +115,57 @@ function wc_inventory_insights_get_categories()
   }
 
   wp_send_json_success($hierarchical_categories);
+}
+
+/**
+ * Get product IDs that match the given filter
+ * 
+ * @param string $filter_type Filter type (tags|attributes)
+ * @param string $filter_value Filter value
+ * @return array Array of product IDs
+ */
+function wc_inventory_insights_get_filtered_product_ids($filter_type, $filter_value)
+{
+  $args = array(
+    'post_type' => array('product', 'product_variation'),
+    'post_status' => 'publish',
+    'posts_per_page' => -1,
+    'fields' => 'ids',
+    'meta_query' => array(
+      array(
+        'key' => '_manage_stock',
+        'value' => 'yes',
+      ),
+    ),
+  );
+
+  // Set up taxonomy query based on filter type
+  if ($filter_type === 'tags') {
+    $args['tax_query'] = array(
+      array(
+        'taxonomy' => 'product_tag',
+        'field' => 'term_id',
+        'terms' => $filter_value,
+      ),
+    );
+  } elseif ($filter_type === 'attributes') {
+    $parts = explode('|', $filter_value);
+    if (count($parts) === 2) {
+      $attribute_name = $parts[0];
+      $term_id = $parts[1];
+
+      $args['tax_query'] = array(
+        array(
+          'taxonomy' => wc_attribute_taxonomy_name($attribute_name),
+          'field' => 'term_id',
+          'terms' => $term_id,
+        ),
+      );
+    }
+  }
+
+  $query = new WP_Query($args);
+  return $query->posts;
 }
 
 // Note: Category hierarchy functions are defined in search-functions.php

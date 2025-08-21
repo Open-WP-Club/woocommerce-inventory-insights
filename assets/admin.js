@@ -18,8 +18,9 @@ jQuery(document).ready(function($) {
      */
     function initInventoryInsights() {
         loadRecentSearches();
-        loadProductCategories();
+        // Don't load categories on page load - load them conditionally
         bindFilterTypeChange();
+        bindFilterValueChange(); // New: bind filter value changes
         bindFormSubmission();
         bindExportButtons();
         bindRecentSearches();
@@ -28,27 +29,51 @@ jQuery(document).ready(function($) {
     }
     
     /**
-     * Load product categories on page load
+     * Load product categories conditionally based on selected filter
+     * 
+     * @param {string} filterType Selected filter type (optional)
+     * @param {string} filterValue Selected filter value (optional)
      */
-    function loadProductCategories() {
+    function loadProductCategories(filterType, filterValue) {
         var $categorySelect = $('#product_category');
         
-        // Show loading state
-        $categorySelect.html('<option value="">Loading categories...</option>').prop('disabled', true);
+        // If no filter is selected, show basic "All Categories" option
+        if (!filterType || !filterValue) {
+            $categorySelect.html('<option value="">All Categories</option>').prop('disabled', false);
+            return;
+        }
         
-        $.post(wcInventoryInsights.ajaxurl, {
+        // Show loading state with context
+        var loadingText = (filterType && filterValue) ? 
+            'Loading categories for selected filter...' : 
+            'Loading categories...';
+        $categorySelect.html('<option value="">' + loadingText + '</option>').prop('disabled', true);
+        
+        var requestData = {
             action: 'wc_inventory_insights_get_categories',
             nonce: wcInventoryInsights.nonce
-        })
+        };
+        
+        // Add filter parameters if provided
+        if (filterType && filterValue) {
+            requestData.filter_type = filterType;
+            requestData.filter_value = filterValue;
+        }
+        
+        $.post(wcInventoryInsights.ajaxurl, requestData)
         .done(function(response) {
             if (response.success && response.data) {
+                debugLog('Categories loaded', 'Found ' + response.data.length + ' categories for filter: ' + filterType + '=' + filterValue);
                 populateCategories(response.data);
             } else {
-                showError('Failed to load categories. Please refresh the page.');
+                // If no categories found for this filter, show message
+                debugLog('No categories found for filter', filterType + '=' + filterValue);
+                $categorySelect.html('<option value="">No categories found for this filter</option>');
             }
         })
         .fail(function() {
             showError('Failed to load categories. Please check your connection.');
+            $categorySelect.html('<option value="">All Categories</option>');
         })
         .always(function() {
             $categorySelect.prop('disabled', false);
@@ -220,12 +245,23 @@ jQuery(document).ready(function($) {
      */
     function loadSearchIntoForm(search) {
         $('#filter_type').val(search.filter_type).trigger('change');
-        $('#product_category').val(search.product_category || '');
         $('#min_stock').val(search.min_stock || '');
         
-        // Wait for filter values to load, then set the value
+        // Wait for filter values to load, then set the values and load categories
         setTimeout(function() {
             $('#filter_value').val(search.filter_value);
+            
+            // Load categories based on the filter, then set category value
+            if (search.filter_type && search.filter_value) {
+                loadProductCategories(search.filter_type, search.filter_value);
+                
+                // Wait a bit more for categories to load, then set the category
+                setTimeout(function() {
+                    $('#product_category').val(search.product_category || '');
+                }, 300);
+            } else {
+                $('#product_category').val(search.product_category || '');
+            }
         }, 500);
     }
     
@@ -244,6 +280,26 @@ jQuery(document).ready(function($) {
             } else {
                 $filterValueRow.hide();
                 clearResults();
+            }
+            
+            // Reset categories when filter type changes
+            loadProductCategories(); // Load basic "All Categories"
+        });
+    }
+    
+    /**
+     * Handle filter value change - load categories based on selected filter
+     */
+    function bindFilterValueChange() {
+        $('#filter_value').on('change', function() {
+            var filterType = $('#filter_type').val();
+            var filterValue = $(this).val();
+            
+            // Load categories filtered by the selected tag/attribute
+            if (filterType && filterValue) {
+                loadProductCategories(filterType, filterValue);
+            } else {
+                loadProductCategories(); // Load basic "All Categories"
             }
         });
     }

@@ -70,7 +70,7 @@ function wc_inventory_insights_admin_page()
               <select id="product_category" name="product_category">
                 <option value=""><?php _e('All Categories', 'woocommerce-inventory-insights'); ?></option>
               </select>
-              <p class="description"><?php _e('Optional: Filter results by a specific product category.', 'woocommerce-inventory-insights'); ?></p>
+              <p class="description"><?php _e('Optional: Filter results by a specific product category. Categories will be filtered based on your selected tag/attribute.', 'woocommerce-inventory-insights'); ?></p>
             </td>
           </tr>
           <tr>
