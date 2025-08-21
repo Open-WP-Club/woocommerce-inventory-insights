@@ -137,6 +137,31 @@ function wc_inventory_insights_sanitize_min_stock($input)
 }
 
 /**
+ * Sanitize and validate product category input
+ * 
+ * @param mixed $input Raw input value
+ * @return int|null Sanitized category ID or null
+ */
+function wc_inventory_insights_sanitize_product_category($input)
+{
+  if ($input === '' || $input === null) {
+    return null;
+  }
+
+  $value = intval($input);
+
+  // Verify that the category exists
+  if ($value > 0) {
+    $term = get_term($value, 'product_cat');
+    if ($term && !is_wp_error($term)) {
+      return $value;
+    }
+  }
+
+  return null;
+}
+
+/**
  * Format filter label for display
  * 
  * @param string $type Filter type (tags|attributes)
@@ -167,6 +192,81 @@ function wc_inventory_insights_format_filter_label($type, $value)
   }
 
   return __('Unknown Filter', 'woocommerce-inventory-insights');
+}
+
+/**
+ * Format category label for display
+ * 
+ * @param int|null $category_id Category term ID
+ * @return string Formatted category label
+ */
+function wc_inventory_insights_format_category_label($category_id)
+{
+  if ($category_id === null) {
+    return __('All Categories', 'woocommerce-inventory-insights');
+  }
+
+  $term = get_term($category_id, 'product_cat');
+  if ($term && !is_wp_error($term)) {
+    return $term->name;
+  }
+
+  return __('Unknown Category', 'woocommerce-inventory-insights');
+}
+
+/**
+ * Get category hierarchy path for display
+ * 
+ * @param int $category_id Category term ID
+ * @return string Category path (e.g., "Electronics > Phones > Smartphones")
+ */
+function wc_inventory_insights_get_category_path($category_id)
+{
+  $path = array();
+  $current_id = $category_id;
+
+  while ($current_id > 0) {
+    $term = get_term($current_id, 'product_cat');
+    if (!$term || is_wp_error($term)) {
+      break;
+    }
+
+    array_unshift($path, $term->name);
+    $current_id = $term->parent;
+  }
+
+  return implode(' > ', $path);
+}
+
+/**
+ * Build search summary for display
+ * 
+ * @param string $filter_type Filter type
+ * @param string $filter_value Filter value
+ * @param int|null $min_stock Minimum stock threshold
+ * @param int|null $product_category Product category ID
+ * @return string Search summary
+ */
+function wc_inventory_insights_build_search_summary($filter_type, $filter_value, $min_stock = null, $product_category = null)
+{
+  $parts = array();
+
+  // Add filter type and value
+  $filter_label = wc_inventory_insights_format_filter_label($filter_type, $filter_value);
+  $parts[] = $filter_label;
+
+  // Add category if specified
+  if ($product_category !== null) {
+    $category_label = wc_inventory_insights_format_category_label($product_category);
+    $parts[] = sprintf(__('in %s', 'woocommerce-inventory-insights'), $category_label);
+  }
+
+  // Add stock threshold if specified
+  if ($min_stock !== null) {
+    $parts[] = sprintf(__('with stock below %d', 'woocommerce-inventory-insights'), $min_stock);
+  }
+
+  return implode(' ', $parts);
 }
 
 /**

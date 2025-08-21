@@ -17,9 +17,10 @@ if (!defined('ABSPATH')) {
  * @param string $filter_type Type of filter (tags|attributes)
  * @param string $filter_value Selected tag/attribute value
  * @param int|null $min_stock Minimum stock threshold (null = show all)
+ * @param int|null $product_category Product category ID (null = all categories)
  * @return array Array of product data
  */
-function wc_inventory_insights_search_products($filter_type, $filter_value, $min_stock = null)
+function wc_inventory_insights_search_products($filter_type, $filter_value, $min_stock = null, $product_category = null)
 {
   $args = array(
     'post_type' => array('product', 'product_variation'),
@@ -33,14 +34,15 @@ function wc_inventory_insights_search_products($filter_type, $filter_value, $min
     ),
   );
 
+  // Build tax_query array
+  $tax_query = array();
+
   // Set up taxonomy query based on filter type
   if ($filter_type === 'tags') {
-    $args['tax_query'] = array(
-      array(
-        'taxonomy' => 'product_tag',
-        'field' => 'term_id',
-        'terms' => $filter_value,
-      ),
+    $tax_query[] = array(
+      'taxonomy' => 'product_tag',
+      'field' => 'term_id',
+      'terms' => $filter_value,
     );
   } elseif ($filter_type === 'attributes') {
     $parts = explode('|', $filter_value);
@@ -48,14 +50,29 @@ function wc_inventory_insights_search_products($filter_type, $filter_value, $min
       $attribute_name = $parts[0];
       $term_id = $parts[1];
 
-      $args['tax_query'] = array(
-        array(
-          'taxonomy' => wc_attribute_taxonomy_name($attribute_name),
-          'field' => 'term_id',
-          'terms' => $term_id,
-        ),
+      $tax_query[] = array(
+        'taxonomy' => wc_attribute_taxonomy_name($attribute_name),
+        'field' => 'term_id',
+        'terms' => $term_id,
       );
     }
+  }
+
+  // Add category filter if specified
+  if ($product_category !== null) {
+    $tax_query[] = array(
+      'taxonomy' => 'product_cat',
+      'field' => 'term_id',
+      'terms' => $product_category,
+    );
+  }
+
+  // Apply tax_query if we have any taxonomy filters
+  if (!empty($tax_query)) {
+    if (count($tax_query) > 1) {
+      $tax_query['relation'] = 'AND';
+    }
+    $args['tax_query'] = $tax_query;
   }
 
   $query = new WP_Query($args);
@@ -153,14 +170,106 @@ function wc_inventory_insights_get_product_attributes()
 }
 
 /**
+ * Get all product categories with hierarchy (no counts for performance)
+ * 
+ * @return array Array of hierarchical category data
+ */
+function wc_inventory_insights_get_product_categories()
+{
+  $categories = get_terms(array(
+    'taxonomy' => 'product_cat',
+    'hide_empty' => true,
+    'orderby' => 'name',
+    'order' => 'ASC',
+  ));
+
+  if (is_wp_error($categories)) {
+    return array();
+  }
+
+  return wc_inventory_insights_build_category_hierarchy($categories);
+}
+
+/**
+ * Build hierarchical category structure for display
+ * 
+ * @param array $categories Flat array of category terms
+ * @return array Hierarchical array of categories with indentation
+ */
+function wc_inventory_insights_build_category_hierarchy($categories)
+{
+  $hierarchy = array();
+  $children = array();
+
+  // First pass: organize children by parent ID
+  foreach ($categories as $category) {
+    if ($category->parent != 0) {
+      $children[$category->parent][] = $category;
+    }
+  }
+
+  // Second pass: build hierarchy starting with top-level categories
+  foreach ($categories as $category) {
+    if ($category->parent == 0) { // Top-level category
+      $hierarchy[] = array(
+        'id' => $category->term_id,
+        'name' => $category->name,
+        'level' => 0,
+        'display_name' => $category->name
+      );
+
+      // Add children recursively
+      if (isset($children[$category->term_id])) {
+        wc_inventory_insights_add_category_children_recursive($hierarchy, $children, $category->term_id, 1);
+      }
+    }
+  }
+
+  return $hierarchy;
+}
+
+/**
+ * Recursively add category children with proper indentation
+ * 
+ * @param array &$hierarchy Reference to hierarchy array
+ * @param array $children Array of children organized by parent ID
+ * @param int $parent_id Parent category ID
+ * @param int $level Current nesting level
+ */
+function wc_inventory_insights_add_category_children_recursive(&$hierarchy, $children, $parent_id, $level)
+{
+  if (!isset($children[$parent_id])) {
+    return;
+  }
+
+  foreach ($children[$parent_id] as $child) {
+    // Create indentation based on level
+    $indent = str_repeat('— ', $level);
+
+    $hierarchy[] = array(
+      'id' => $child->term_id,
+      'name' => $child->name,
+      'level' => $level,
+      'display_name' => $indent . $child->name
+    );
+
+    // Add grandchildren if they exist
+    if (isset($children[$child->term_id])) {
+      wc_inventory_insights_add_category_children_recursive($hierarchy, $children, $child->term_id, $level + 1);
+    }
+  }
+}
+
+/**
  * Validate search parameters
  * 
  * @param string $filter_type Filter type
  * @param string $filter_value Filter value
  * @param int|null $min_stock Minimum stock threshold
+ * @param int|null $product_category Product category ID
  * @return array|true Array of errors or true if valid
  */
-function wc_inventory_insights_validate_search_params($filter_type, $filter_value, $min_stock)
+function wc_inventory_insights_validate_search_params($filter_type, $filter_value, $min_stock, $product_category = null)
 {
   $errors = array();
 
@@ -177,6 +286,11 @@ function wc_inventory_insights_validate_search_params($filter_type, $filter_valu
   // Validate minimum stock (optional)
   if ($min_stock !== null && $min_stock < 0) {
     $errors[] = __('Minimum stock must be a positive number.', 'woocommerce-inventory-insights');
+  }
+
+  // Validate product category (optional)
+  if ($product_category !== null && $product_category < 0) {
+    $errors[] = __('Invalid product category.', 'woocommerce-inventory-insights');
   }
 
   return empty($errors) ? true : $errors;

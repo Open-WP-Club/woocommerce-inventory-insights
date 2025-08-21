@@ -18,12 +18,55 @@ jQuery(document).ready(function($) {
      */
     function initInventoryInsights() {
         loadRecentSearches();
+        loadProductCategories();
         bindFilterTypeChange();
         bindFormSubmission();
         bindExportButtons();
         bindRecentSearches();
         bindSortOptions();
         bindBulkSelection();
+    }
+    
+    /**
+     * Load product categories on page load
+     */
+    function loadProductCategories() {
+        var $categorySelect = $('#product_category');
+        
+        // Show loading state
+        $categorySelect.html('<option value="">Loading categories...</option>').prop('disabled', true);
+        
+        $.post(wcInventoryInsights.ajaxurl, {
+            action: 'wc_inventory_insights_get_categories',
+            nonce: wcInventoryInsights.nonce
+        })
+        .done(function(response) {
+            if (response.success && response.data) {
+                populateCategories(response.data);
+            } else {
+                showError('Failed to load categories. Please refresh the page.');
+            }
+        })
+        .fail(function() {
+            showError('Failed to load categories. Please check your connection.');
+        })
+        .always(function() {
+            $categorySelect.prop('disabled', false);
+        });
+    }
+    
+    /**
+     * Populate category dropdown with hierarchical structure
+     */
+    function populateCategories(categories) {
+        var $categorySelect = $('#product_category');
+        var options = '<option value="">All Categories</option>';
+        
+        $.each(categories, function(index, category) {
+            options += '<option value="' + escapeHtml(category.value) + '">' + escapeHtml(category.label) + '</option>';
+        });
+        
+        $categorySelect.html(options);
     }
     
     /**
@@ -60,6 +103,7 @@ jQuery(document).ready(function($) {
         var search = {
             filter_type: searchData.filter_type,
             filter_value: searchData.filter_value,
+            product_category: searchData.product_category,
             min_stock: searchData.min_stock,
             label: generateSearchLabel(searchData),
             timestamp: Date.now()
@@ -69,6 +113,7 @@ jQuery(document).ready(function($) {
         recentSearches = recentSearches.filter(function(item) {
             return !(item.filter_type === search.filter_type && 
                     item.filter_value === search.filter_value && 
+                    item.product_category === search.product_category &&
                     item.min_stock === search.min_stock);
         });
         
@@ -89,8 +134,18 @@ jQuery(document).ready(function($) {
      */
     function generateSearchLabel(searchData) {
         var filterText = $('#filter_value option:selected').text() || searchData.filter_value;
+        var categoryText = '';
         var thresholdText = searchData.min_stock ? ' (threshold: ' + searchData.min_stock + ')' : ' (all products)';
-        return filterText + thresholdText;
+        
+        // Add category info if selected
+        if (searchData.product_category) {
+            var categoryOptionText = $('#product_category option:selected').text();
+            if (categoryOptionText && categoryOptionText !== 'All Categories') {
+                categoryText = ' in ' + categoryOptionText;
+            }
+        }
+        
+        return filterText + categoryText + thresholdText;
     }
     
     /**
@@ -165,11 +220,12 @@ jQuery(document).ready(function($) {
      */
     function loadSearchIntoForm(search) {
         $('#filter_type').val(search.filter_type).trigger('change');
+        $('#product_category').val(search.product_category || '');
+        $('#min_stock').val(search.min_stock || '');
         
         // Wait for filter values to load, then set the value
         setTimeout(function() {
             $('#filter_value').val(search.filter_value);
-            $('#min_stock').val(search.min_stock || '');
         }, 500);
     }
     
@@ -380,6 +436,7 @@ jQuery(document).ready(function($) {
         return {
             filter_type: $('#filter_type').val(),
             filter_value: $('#filter_value').val(),
+            product_category: $('#product_category').val(),
             min_stock: $('#min_stock').val()
         };
     }
@@ -398,9 +455,14 @@ jQuery(document).ready(function($) {
             return false;
         }
         
-        // min_stock is optional, but if provided must be valid
+        // min_stock and product_category are optional, but if provided must be valid
         if (data.min_stock !== '' && (isNaN(data.min_stock) || parseInt(data.min_stock) < 0)) {
             showError('Minimum stock must be a positive number.');
+            return false;
+        }
+        
+        if (data.product_category !== '' && (isNaN(data.product_category) || parseInt(data.product_category) < 0)) {
+            showError('Invalid product category selected.');
             return false;
         }
         
@@ -428,6 +490,7 @@ jQuery(document).ready(function($) {
             action: 'wc_inventory_insights_search',
             filter_type: formData.filter_type,
             filter_value: formData.filter_value,
+            product_category: formData.product_category,
             min_stock: formData.min_stock,
             nonce: wcInventoryInsights.nonce
         })
@@ -642,6 +705,7 @@ jQuery(document).ready(function($) {
         $form.append(createHiddenInput('action', 'wc_inventory_insights_export'));
         $form.append(createHiddenInput('filter_type', $('#filter_type').val()));
         $form.append(createHiddenInput('filter_value', $('#filter_value').val()));
+        $form.append(createHiddenInput('product_category', $('#product_category').val()));
         $form.append(createHiddenInput('min_stock', $('#min_stock').val()));
         $form.append(createHiddenInput('export_type', exportType));
         

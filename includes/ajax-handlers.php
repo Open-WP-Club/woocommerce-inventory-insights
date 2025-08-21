@@ -13,6 +13,7 @@ if (!defined('ABSPATH')) {
 
 // Register AJAX handlers
 add_action('wp_ajax_wc_inventory_insights_get_filter_values', 'wc_inventory_insights_get_filter_values');
+add_action('wp_ajax_wc_inventory_insights_get_categories', 'wc_inventory_insights_get_categories');
 add_action('wp_ajax_wc_inventory_insights_search', 'wc_inventory_insights_handle_ajax_search');
 add_action('wp_ajax_wc_inventory_insights_export', 'wc_inventory_insights_handle_csv_export');
 
@@ -62,6 +63,44 @@ function wc_inventory_insights_get_filter_values()
 }
 
 /**
+ * Get product categories with hierarchy via AJAX
+ */
+function wc_inventory_insights_get_categories()
+{
+  if (!wp_verify_nonce($_POST['nonce'], 'wc_inventory_insights_nonce')) {
+    wp_die('Security check failed');
+  }
+
+  $categories = get_terms(array(
+    'taxonomy' => 'product_cat',
+    'hide_empty' => true,
+    'orderby' => 'name',
+    'order' => 'ASC',
+  ));
+
+  if (is_wp_error($categories)) {
+    wp_send_json_error('Failed to load categories');
+    return;
+  }
+
+  // Build hierarchical structure using function from search-functions.php
+  $categories_hierarchy = wc_inventory_insights_build_category_hierarchy($categories);
+
+  // Convert format for AJAX response
+  $hierarchical_categories = array();
+  foreach ($categories_hierarchy as $category) {
+    $hierarchical_categories[] = array(
+      'value' => $category['id'],
+      'label' => $category['display_name']
+    );
+  }
+
+  wp_send_json_success($hierarchical_categories);
+}
+
+// Note: Category hierarchy functions are defined in search-functions.php
+
+/**
  * Handle AJAX search
  */
 function wc_inventory_insights_handle_ajax_search()
@@ -73,8 +112,9 @@ function wc_inventory_insights_handle_ajax_search()
   $filter_type = sanitize_text_field($_POST['filter_type']);
   $filter_value = sanitize_text_field($_POST['filter_value']);
   $min_stock = isset($_POST['min_stock']) && $_POST['min_stock'] !== '' ? intval($_POST['min_stock']) : null;
+  $product_category = isset($_POST['product_category']) && $_POST['product_category'] !== '' ? intval($_POST['product_category']) : null;
 
-  $products = wc_inventory_insights_search_products($filter_type, $filter_value, $min_stock);
+  $products = wc_inventory_insights_search_products($filter_type, $filter_value, $min_stock, $product_category);
   $html = wc_inventory_insights_generate_results_html($products, $min_stock);
 
   wp_send_json_success(array(
@@ -95,11 +135,12 @@ function wc_inventory_insights_handle_csv_export()
   $filter_type = sanitize_text_field($_POST['filter_type']);
   $filter_value = sanitize_text_field($_POST['filter_value']);
   $min_stock = isset($_POST['min_stock']) && $_POST['min_stock'] !== '' ? intval($_POST['min_stock']) : null;
+  $product_category = isset($_POST['product_category']) && $_POST['product_category'] !== '' ? intval($_POST['product_category']) : null;
   $export_type = isset($_POST['export_type']) ? sanitize_text_field($_POST['export_type']) : 'all';
   $selected_products = isset($_POST['selected_products']) ? array_map('intval', $_POST['selected_products']) : array();
 
   // Get all products matching the search criteria
-  $all_products = wc_inventory_insights_search_products($filter_type, $filter_value, $min_stock);
+  $all_products = wc_inventory_insights_search_products($filter_type, $filter_value, $min_stock, $product_category);
 
   // Filter products based on export type
   if ($export_type === 'selected' && !empty($selected_products)) {

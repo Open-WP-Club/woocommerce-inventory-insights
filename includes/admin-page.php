@@ -64,6 +64,17 @@ function wc_inventory_insights_admin_page()
           </tr>
           <tr>
             <th scope="row">
+              <label for="product_category"><?php _e('Product Category (Optional)', 'woocommerce-inventory-insights'); ?></label>
+            </th>
+            <td>
+              <select id="product_category" name="product_category">
+                <option value=""><?php _e('All Categories', 'woocommerce-inventory-insights'); ?></option>
+              </select>
+              <p class="description"><?php _e('Optional: Filter results by a specific product category.', 'woocommerce-inventory-insights'); ?></p>
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">
               <label for="min_stock"><?php _e('Minimum Stock Threshold', 'woocommerce-inventory-insights'); ?></label>
             </th>
             <td>
