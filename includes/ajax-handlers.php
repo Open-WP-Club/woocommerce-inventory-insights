@@ -128,15 +128,9 @@ function wc_inventory_insights_get_filtered_product_ids($filter_type, $filter_va
 {
   $args = array(
     'post_type' => array('product', 'product_variation'),
-    'post_status' => 'publish',
+    'post_status' => 'any',
     'posts_per_page' => -1,
     'fields' => 'ids',
-    'meta_query' => array(
-      array(
-        'key' => '_manage_stock',
-        'value' => 'yes',
-      ),
-    ),
   );
 
   // Set up taxonomy query based on filter type
