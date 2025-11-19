@@ -26,12 +26,6 @@ function wc_inventory_insights_search_products($filter_type, $filter_value, $min
     'post_type' => array('product', 'product_variation'),
     'post_status' => 'any',
     'posts_per_page' => -1,
-    'meta_query' => array(
-      array(
-        'key' => '_manage_stock',
-        'value' => 'yes',
-      ),
-    ),
   );
 
   // Build tax_query array
@@ -83,12 +77,15 @@ function wc_inventory_insights_search_products($filter_type, $filter_value, $min
     if (!$product) continue;
 
     $stock_quantity = $product->get_stock_quantity();
+    $managing_stock = $product->get_manage_stock();
+    // Use 0 for products without stock management
+    $display_stock_quantity = $stock_quantity !== null ? $stock_quantity : 0;
 
     // If no minimum stock is set, include all products
     // If minimum stock is set, only include products below threshold
-    $should_include = ($min_stock === null) || ($stock_quantity !== null && $stock_quantity < $min_stock);
+    $should_include = ($min_stock === null) || ($display_stock_quantity < $min_stock);
 
-    if ($should_include && $stock_quantity !== null) {
+    if ($should_include) {
       // Get product categories
       $product_categories = wp_get_post_terms($product->get_id(), 'product_cat', array('fields' => 'names'));
       $categories_list = is_array($product_categories) ? implode(', ', $product_categories) : '';
@@ -97,11 +94,12 @@ function wc_inventory_insights_search_products($filter_type, $filter_value, $min
         'id' => $product->get_id(),
         'name' => $product->get_name(),
         'sku' => $product->get_sku(),
-        'stock_quantity' => $stock_quantity,
+        'stock_quantity' => $display_stock_quantity,
+        'managing_stock' => $managing_stock,
         'categories' => $categories_list,
         'image_url' => wp_get_attachment_image_url($product->get_image_id(), 'thumbnail'),
         'edit_url' => get_edit_post_link($product->get_id()),
-        'needed_quantity' => $min_stock !== null ? max(0, $min_stock - $stock_quantity) : 0,
+        'needed_quantity' => $min_stock !== null ? max(0, $min_stock - $display_stock_quantity) : 0,
       );
     }
   }

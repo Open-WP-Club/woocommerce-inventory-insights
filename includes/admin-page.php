@@ -158,7 +158,7 @@ function wc_inventory_insights_generate_results_html($products, $min_stock)
   $html .= '<tbody>';
 
   foreach ($products as $product) {
-    $html .= '<tr data-product-id="' . esc_attr($product['id']) . '">';
+    $html .= '<tr data-product-id="' . esc_attr($product['id']) . '" data-managing-stock="' . esc_attr($product['managing_stock'] ? '1' : '0') . '">';
 
     // Bulk selection checkbox
     $html .= '<td class="bulk-select-column"><input type="checkbox" class="product-checkbox" value="' . esc_attr($product['id']) . '"></td>';
@@ -181,22 +181,35 @@ function wc_inventory_insights_generate_results_html($products, $min_stock)
     // Categories
     $html .= '<td>' . esc_html($product['categories'] ?: '-') . '</td>';
 
-    // Current stock - highlight if below threshold
-    $stock_class = ($min_stock > 0 && $product['stock_quantity'] < $min_stock) ? 'stock-below-threshold' : '';
-    $html .= '<td><span class="' . $stock_class . '">' . esc_html($product['stock_quantity']) . '</span></td>';
+    // Current stock - highlight if below threshold or show stock management disabled
+    if (!$product['managing_stock']) {
+      $html .= '<td><span class="stock-not-managed">' . __('Not managed', 'woocommerce-inventory-insights') . '</span></td>';
+    } else {
+      $stock_class = ($min_stock > 0 && $product['stock_quantity'] < $min_stock) ? 'stock-below-threshold' : '';
+      $html .= '<td><span class="' . $stock_class . '">' . esc_html($product['stock_quantity']) . '</span></td>';
+    }
 
     // Stock needed (only if min_stock is set)
     if ($min_stock > 0) {
-      $needed = max(0, $min_stock - $product['stock_quantity']);
-      if ($needed > 0) {
-        $html .= '<td><span class="stock-needed">+' . esc_html($needed) . '</span></td>';
+      if (!$product['managing_stock']) {
+        $html .= '<td><span class="stock-not-managed">-</span></td>';
       } else {
-        $html .= '<td>-</td>';
+        $needed = max(0, $min_stock - $product['stock_quantity']);
+        if ($needed > 0) {
+          $html .= '<td><span class="stock-needed">+' . esc_html($needed) . '</span></td>';
+        } else {
+          $html .= '<td>-</td>';
+        }
       }
     }
 
-    // Edit link
-    $html .= '<td><a href="' . esc_url($product['edit_url']) . '" class="button button-small">' . __('Edit Product', 'woocommerce-inventory-insights') . '</a></td>';
+    // Edit link and Enable Stock Management button
+    $html .= '<td>';
+    if (!$product['managing_stock']) {
+      $html .= '<button class="button button-small enable-stock-btn" data-product-id="' . esc_attr($product['id']) . '">' . __('Enable Stock', 'woocommerce-inventory-insights') . '</button> ';
+    }
+    $html .= '<a href="' . esc_url($product['edit_url']) . '" class="button button-small">' . __('Edit Product', 'woocommerce-inventory-insights') . '</a>';
+    $html .= '</td>';
     $html .= '</tr>';
   }
 
