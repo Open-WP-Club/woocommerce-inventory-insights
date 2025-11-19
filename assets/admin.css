@@ -74,12 +74,11 @@
 
 /* Results Header */
 .results-header {
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 24px;
-  margin: 20px 0 20px 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  background: #fff;
+  border: 1px solid #ccd0d4;
+  border-radius: 4px;
+  padding: 20px;
+  margin: 20px 0;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -105,10 +104,7 @@
 .results-count {
   font-size: 15px;
   font-weight: 500;
-  background: rgba(255, 255, 255, 0.7);
-  padding-top: 50px;
-  display: inline-block;
-  backdrop-filter: blur(4px);
+  color: #64748b;
 }
 
 .results-controls {
@@ -122,11 +118,6 @@
   display: flex;
   gap: 10px;
   align-items: center;
-  background: rgba(255, 255, 255, 0.9);
-  padding: 8px 16px;
-  border-radius: 8px;
-  border: 1px solid rgba(226, 232, 240, 0.8);
-  backdrop-filter: blur(4px);
 }
 
 .results-controls label {
@@ -137,12 +128,9 @@
 }
 
 .bulk-actions {
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  padding: 12px 16px;
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  backdrop-filter: blur(8px);
+  display: flex;
+  gap: 10px;
+  align-items: center;
 }
 
 /* Bulk Selection */
@@ -236,12 +224,65 @@
   background: #f0b849;
   border-color: #f0b849;
   color: #fff;
-  margin-right: 5px;
 }
 
 .enable-stock-btn:hover {
   background: #e09b2b;
   border-color: #e09b2b;
+}
+
+/* Quantity Controls */
+.actions-column {
+  white-space: nowrap;
+}
+
+.quantity-controls {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.quantity-controls .quantity-input {
+  width: 70px;
+  text-align: center;
+  padding: 4px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.quantity-controls .quantity-input:focus {
+  border-color: #0073aa;
+  outline: none;
+  box-shadow: 0 0 0 1px #0073aa;
+}
+
+.quantity-controls .quantity-input.quantity-updated {
+  background-color: #e7f7e7;
+  border-color: #00a32a;
+}
+
+.quantity-controls .quantity-decrease,
+.quantity-controls .quantity-increase {
+  min-width: 30px;
+  padding: 4px 8px;
+  font-weight: bold;
+  background: #f6f7f7;
+  border-color: #ddd;
+  color: #2c3338;
+}
+
+.quantity-controls .quantity-decrease:hover,
+.quantity-controls .quantity-increase:hover {
+  background: #f0f0f1;
+  border-color: #999;
+  color: #000;
+}
+
+.quantity-controls .quantity-decrease:active,
+.quantity-controls .quantity-increase:active {
+  background: #dcdcde;
 }
 
 /* No Results Message */
@@ -295,14 +336,14 @@
 
 /* Export Button */
 #export-csv-btn {
-  background: #00a32a;
-  border-color: #00a32a;
+  background: #0073aa;
+  border-color: #0073aa;
   color: #fff;
 }
 
 #export-csv-btn:hover {
-  background: #008a20;
-  border-color: #008a20;
+  background: #005a87;
+  border-color: #005a87;
 }
 
 /* Responsive Design */
