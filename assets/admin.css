@@ -105,10 +105,7 @@
 .results-count {
   font-size: 15px;
   font-weight: 500;
-  background: rgba(255, 255, 255, 0.7);
-  padding-top: 50px;
-  display: inline-block;
-  backdrop-filter: blur(4px);
+  color: #64748b;
 }
 
 .results-controls {
@@ -236,12 +233,65 @@
   background: #f0b849;
   border-color: #f0b849;
   color: #fff;
-  margin-right: 5px;
 }
 
 .enable-stock-btn:hover {
   background: #e09b2b;
   border-color: #e09b2b;
+}
+
+/* Quantity Controls */
+.actions-column {
+  white-space: nowrap;
+}
+
+.quantity-controls {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.quantity-controls .quantity-input {
+  width: 70px;
+  text-align: center;
+  padding: 4px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.quantity-controls .quantity-input:focus {
+  border-color: #0073aa;
+  outline: none;
+  box-shadow: 0 0 0 1px #0073aa;
+}
+
+.quantity-controls .quantity-input.quantity-updated {
+  background-color: #e7f7e7;
+  border-color: #00a32a;
+}
+
+.quantity-controls .quantity-decrease,
+.quantity-controls .quantity-increase {
+  min-width: 30px;
+  padding: 4px 8px;
+  font-weight: bold;
+  background: #f6f7f7;
+  border-color: #ddd;
+  color: #2c3338;
+}
+
+.quantity-controls .quantity-decrease:hover,
+.quantity-controls .quantity-increase:hover {
+  background: #f0f0f1;
+  border-color: #999;
+  color: #000;
+}
+
+.quantity-controls .quantity-decrease:active,
+.quantity-controls .quantity-increase:active {
+  background: #dcdcde;
 }
 
 /* No Results Message */
@@ -295,14 +345,14 @@
 
 /* Export Button */
 #export-csv-btn {
-  background: #00a32a;
-  border-color: #00a32a;
+  background: #0073aa;
+  border-color: #0073aa;
   color: #fff;
 }
 
 #export-csv-btn:hover {
-  background: #008a20;
-  border-color: #008a20;
+  background: #005a87;
+  border-color: #005a87;
 }
 
 /* Responsive Design */

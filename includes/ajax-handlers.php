@@ -17,6 +17,7 @@ add_action('wp_ajax_wc_inventory_insights_get_categories', 'wc_inventory_insight
 add_action('wp_ajax_wc_inventory_insights_search', 'wc_inventory_insights_handle_ajax_search');
 add_action('wp_ajax_wc_inventory_insights_export', 'wc_inventory_insights_handle_csv_export');
 add_action('wp_ajax_wc_inventory_insights_enable_stock', 'wc_inventory_insights_enable_stock_management');
+add_action('wp_ajax_wc_inventory_insights_update_quantity', 'wc_inventory_insights_update_quantity');
 
 /**
  * Get filter values via AJAX
@@ -39,7 +40,7 @@ function wc_inventory_insights_get_filter_values()
     foreach ($tags as $tag) {
       $values[] = array(
         'value' => $tag->term_id,
-        'label' => $tag->name . ' (' . $tag->count . ' products)'
+        'label' => $tag->name
       );
     }
   } elseif ($filter_type === 'attributes') {
@@ -54,7 +55,7 @@ function wc_inventory_insights_get_filter_values()
       foreach ($terms as $term) {
         $values[] = array(
           'value' => $attribute->attribute_name . '|' . $term->term_id,
-          'label' => $attribute->attribute_label . ': ' . $term->name . ' (' . $term->count . ' products)'
+          'label' => $attribute->attribute_label . ': ' . $term->name
         );
       }
     }
@@ -307,5 +308,49 @@ function wc_inventory_insights_enable_stock_management()
   wp_send_json_success(array(
     'message' => __('Stock management enabled successfully.', 'woocommerce-inventory-insights'),
     'stock_quantity' => $stock_quantity
+  ));
+}
+
+/**
+ * Update product stock quantity
+ */
+function wc_inventory_insights_update_quantity()
+{
+  if (!wp_verify_nonce($_POST['nonce'], 'wc_inventory_insights_nonce')) {
+    wp_die('Security check failed');
+  }
+
+  if (!current_user_can('manage_woocommerce')) {
+    wp_send_json_error(array('message' => __('You do not have permission to manage products.', 'woocommerce-inventory-insights')));
+    return;
+  }
+
+  $product_id = isset($_POST['product_id']) ? intval($_POST['product_id']) : 0;
+  $quantity = isset($_POST['quantity']) ? intval($_POST['quantity']) : 0;
+
+  if (!$product_id) {
+    wp_send_json_error(array('message' => __('Invalid product ID.', 'woocommerce-inventory-insights')));
+    return;
+  }
+
+  if ($quantity < 0) {
+    wp_send_json_error(array('message' => __('Quantity must be 0 or greater.', 'woocommerce-inventory-insights')));
+    return;
+  }
+
+  $product = wc_get_product($product_id);
+  if (!$product) {
+    wp_send_json_error(array('message' => __('Product not found.', 'woocommerce-inventory-insights')));
+    return;
+  }
+
+  // Update stock quantity
+  $product->set_stock_quantity($quantity);
+  $product->set_stock_status($quantity > 0 ? 'instock' : 'outofstock');
+  $product->save();
+
+  wp_send_json_success(array(
+    'message' => __('Stock quantity updated successfully.', 'woocommerce-inventory-insights'),
+    'quantity' => $quantity
   ));
 }

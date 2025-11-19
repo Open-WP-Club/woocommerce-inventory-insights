@@ -172,8 +172,8 @@ function wc_inventory_insights_generate_results_html($products, $min_stock)
     }
     $html .= '</td>';
 
-    // Product name
-    $html .= '<td><strong>' . esc_html($product['name']) . '</strong></td>';
+    // Product name with edit link
+    $html .= '<td><strong><a href="' . esc_url($product['edit_url']) . '" target="_blank">' . esc_html($product['name']) . '</a></strong></td>';
 
     // SKU
     $html .= '<td>' . esc_html($product['sku'] ?: '-') . '</td>';
@@ -203,12 +203,17 @@ function wc_inventory_insights_generate_results_html($products, $min_stock)
       }
     }
 
-    // Edit link and Enable Stock Management button
-    $html .= '<td>';
+    // Actions: Quantity controls or Enable Stock button
+    $html .= '<td class="actions-column">';
     if (!$product['managing_stock']) {
-      $html .= '<button class="button button-small enable-stock-btn" data-product-id="' . esc_attr($product['id']) . '">' . __('Enable Stock', 'woocommerce-inventory-insights') . '</button> ';
+      $html .= '<button class="button button-small enable-stock-btn" data-product-id="' . esc_attr($product['id']) . '">' . __('Enable Stock', 'woocommerce-inventory-insights') . '</button>';
+    } else {
+      $html .= '<div class="quantity-controls">';
+      $html .= '<button class="button button-small quantity-decrease" data-product-id="' . esc_attr($product['id']) . '" title="' . __('Decrease quantity', 'woocommerce-inventory-insights') . '">-</button>';
+      $html .= '<input type="number" class="quantity-input" data-product-id="' . esc_attr($product['id']) . '" value="' . esc_attr($product['stock_quantity']) . '" min="0" />';
+      $html .= '<button class="button button-small quantity-increase" data-product-id="' . esc_attr($product['id']) . '" title="' . __('Increase quantity', 'woocommerce-inventory-insights') . '">+</button>';
+      $html .= '</div>';
     }
-    $html .= '<a href="' . esc_url($product['edit_url']) . '" class="button button-small">' . __('Edit Product', 'woocommerce-inventory-insights') . '</a>';
     $html .= '</td>';
     $html .= '</tr>';
   }

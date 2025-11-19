@@ -662,8 +662,8 @@ jQuery(document).ready(function($) {
             }
             html += '</td>';
             
-            // Product name
-            html += '<td><strong>' + escapeHtml(product.name) + '</strong></td>';
+            // Product name with edit link
+            html += '<td><strong><a href="' + escapeHtml(product.edit_url) + '" target="_blank">' + escapeHtml(product.name) + '</a></strong></td>';
             
             // SKU
             html += '<td>' + escapeHtml(product.sku || '-') + '</td>';
@@ -685,8 +685,18 @@ jQuery(document).ready(function($) {
                 }
             }
             
-            // Edit link
-            html += '<td><a href="' + escapeHtml(product.edit_url) + '" class="button button-small">Edit Product</a></td>';
+            // Actions: Quantity controls or Enable Stock button
+            html += '<td class="actions-column">';
+            if (!product.managing_stock) {
+                html += '<button class="button button-small enable-stock-btn" data-product-id="' + product.id + '">Enable Stock</button>';
+            } else {
+                html += '<div class="quantity-controls">';
+                html += '<button class="button button-small quantity-decrease" data-product-id="' + product.id + '" title="Decrease quantity">-</button>';
+                html += '<input type="number" class="quantity-input" data-product-id="' + product.id + '" value="' + product.stock_quantity + '" min="0" />';
+                html += '<button class="button button-small quantity-increase" data-product-id="' + product.id + '" title="Increase quantity">+</button>';
+                html += '</div>';
+            }
+            html += '</td>';
             html += '</tr>';
         });
         
@@ -852,6 +862,110 @@ jQuery(document).ready(function($) {
     }
     
     /**
+     * Handle quantity increase button clicks
+     */
+    $(document).on('click', '.quantity-increase', function(e) {
+        e.preventDefault();
+        var $btn = $(this);
+        var productId = $btn.data('product-id');
+        var $input = $('.quantity-input[data-product-id="' + productId + '"]');
+        var currentValue = parseInt($input.val()) || 0;
+        var newValue = currentValue + 1;
+
+        $input.val(newValue);
+        updateProductQuantity(productId, newValue);
+    });
+
+    /**
+     * Handle quantity decrease button clicks
+     */
+    $(document).on('click', '.quantity-decrease', function(e) {
+        e.preventDefault();
+        var $btn = $(this);
+        var productId = $btn.data('product-id');
+        var $input = $('.quantity-input[data-product-id="' + productId + '"]');
+        var currentValue = parseInt($input.val()) || 0;
+        var newValue = Math.max(0, currentValue - 1);
+
+        $input.val(newValue);
+        updateProductQuantity(productId, newValue);
+    });
+
+    /**
+     * Handle manual quantity input changes
+     */
+    $(document).on('change', '.quantity-input', function(e) {
+        var $input = $(this);
+        var productId = $input.data('product-id');
+        var newValue = parseInt($input.val()) || 0;
+
+        if (newValue < 0) {
+            newValue = 0;
+            $input.val(newValue);
+        }
+
+        updateProductQuantity(productId, newValue);
+    });
+
+    /**
+     * Update product quantity via AJAX
+     */
+    function updateProductQuantity(productId, quantity) {
+        $.post(wcInventoryInsights.ajaxurl, {
+            action: 'wc_inventory_insights_update_quantity',
+            product_id: productId,
+            quantity: quantity,
+            nonce: wcInventoryInsights.nonce
+        })
+        .done(function(response) {
+            if (response.success) {
+                // Update the stock display in the current stock column
+                var $row = $('tr[data-product-id="' + productId + '"]');
+                var $stockCell = $row.find('td').eq(5); // Current Stock column
+                var minStock = $('#min_stock').val();
+
+                // Update stock quantity display
+                if (minStock && minStock !== '' && quantity < parseInt(minStock)) {
+                    $stockCell.html('<span class="stock-below-threshold">' + quantity + '</span>');
+                } else {
+                    $stockCell.html('<span>' + quantity + '</span>');
+                }
+
+                // Update stock needed column if it exists
+                if (minStock && minStock !== '') {
+                    var $neededCell = $row.find('td').eq(6); // Stock Needed column
+                    var needed = Math.max(0, parseInt(minStock) - quantity);
+                    if (needed > 0) {
+                        $neededCell.html('<span class="stock-needed">+' + needed + '</span>');
+                    } else {
+                        $neededCell.html('-');
+                    }
+                }
+
+                // Update currentResults array to keep it in sync
+                for (var i = 0; i < currentResults.length; i++) {
+                    if (currentResults[i].id == productId) {
+                        currentResults[i].stock_quantity = quantity;
+                        break;
+                    }
+                }
+
+                // Show brief success indicator
+                var $input = $('.quantity-input[data-product-id="' + productId + '"]');
+                $input.addClass('quantity-updated');
+                setTimeout(function() {
+                    $input.removeClass('quantity-updated');
+                }, 1000);
+            } else {
+                alert('Error: ' + (response.data && response.data.message ? response.data.message : 'Failed to update quantity.'));
+            }
+        })
+        .fail(function() {
+            alert('Failed to update quantity. Please try again.');
+        });
+    }
+
+    /**
      * Handle enable stock management button clicks
      */
     $(document).on('click', '.enable-stock-btn', function(e) {
@@ -908,8 +1022,23 @@ jQuery(document).ready(function($) {
                     }
                 }
 
-                // Remove the enable button
-                $btn.remove();
+                // Replace the enable button with quantity controls
+                var $actionsCell = $btn.closest('td');
+                var quantityControlsHtml = '<div class="quantity-controls">' +
+                    '<button class="button button-small quantity-decrease" data-product-id="' + productId + '" title="Decrease quantity">-</button>' +
+                    '<input type="number" class="quantity-input" data-product-id="' + productId + '" value="' + stockQty + '" min="0" />' +
+                    '<button class="button button-small quantity-increase" data-product-id="' + productId + '" title="Increase quantity">+</button>' +
+                    '</div>';
+                $actionsCell.html(quantityControlsHtml);
+
+                // Update currentResults array
+                for (var i = 0; i < currentResults.length; i++) {
+                    if (currentResults[i].id == productId) {
+                        currentResults[i].managing_stock = true;
+                        currentResults[i].stock_quantity = stockQty;
+                        break;
+                    }
+                }
 
                 // Show success message
                 var $success = $('<div class="notice notice-success is-dismissible" style="margin: 10px 0;"><p>Stock management enabled for "' + escapeHtml(productName) + '" with initial quantity: ' + stockQty + '</p></div>');
