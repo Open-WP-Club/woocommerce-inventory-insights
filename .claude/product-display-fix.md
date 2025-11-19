@@ -92,8 +92,54 @@ Changed the category loading function to use `'post_status' => 'any'` for consis
 4. Verify products without stock management show stock quantity as 0
 5. Test category dropdown to ensure all categories with matching products appear
 
+## Additional Feature: Enable Stock Management
+
+### Overview
+Added functionality to enable stock management for products that don't have it enabled, directly from the inventory insights page.
+
+### Features Implemented
+
+1. **Visual Indicators**
+   - Products without stock management show "Not managed" instead of a stock quantity
+   - Orange/amber styling (`#f0b849`) to differentiate from products with stock management
+
+2. **Enable Stock Button**
+   - Appears next to products that don't have stock management enabled
+   - Styled with orange/amber color scheme for visibility
+   - Prompts user to enter initial stock quantity
+
+3. **AJAX Handler**
+   - New endpoint: `wc_inventory_insights_enable_stock`
+   - Enables stock management for a product
+   - Sets initial stock quantity
+   - Updates stock status (instock/outofstock) based on quantity
+   - Includes permission checks (requires `manage_woocommerce` capability)
+
+4. **User Experience**
+   - Interactive prompt asking for initial stock quantity
+   - Real-time UI update after enabling stock management
+   - Success notification displayed for 3 seconds
+   - Button is removed after successful activation
+   - Stock quantity and "Stock Needed" columns update automatically
+
+### Files Modified (Stock Management Feature)
+
+- **includes/search-functions.php**: Added `managing_stock` flag to product data
+- **includes/admin-page.php**: Updated HTML to show stock management status and enable button
+- **includes/ajax-handlers.php**: Added AJAX handler for enabling stock management
+- **assets/admin.js**: Added JavaScript to handle enable stock button clicks
+- **assets/admin.css**: Added styling for stock management indicators and button
+
+### Security
+
+- Nonce verification for AJAX requests
+- User capability check (must have `manage_woocommerce` permission)
+- Input validation for stock quantity (must be >= 0)
+- Product ID validation
+
 ## Git Information
 
 - **Branch:** `claude/fix-plugin-product-display-01Epp5zt2dzH5Ys3shwQivPo`
-- **Commit:** b3cb960
-- **Files Changed:** 2 files changed, 7 insertions(+), 17 deletions(-)
+- **Commit:** 63f6925 (stock management feature)
+- **Previous Commit:** b3cb960 (product display fix)
+- **Files Changed:** 7 files total (2 for display fix, 5 for stock management feature)
