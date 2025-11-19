@@ -16,6 +16,7 @@ add_action('wp_ajax_wc_inventory_insights_get_filter_values', 'wc_inventory_insi
 add_action('wp_ajax_wc_inventory_insights_get_categories', 'wc_inventory_insights_get_categories');
 add_action('wp_ajax_wc_inventory_insights_search', 'wc_inventory_insights_handle_ajax_search');
 add_action('wp_ajax_wc_inventory_insights_export', 'wc_inventory_insights_handle_csv_export');
+add_action('wp_ajax_wc_inventory_insights_enable_stock', 'wc_inventory_insights_enable_stock_management');
 
 /**
  * Get filter values via AJAX
@@ -267,4 +268,44 @@ function wc_inventory_insights_handle_csv_export()
 
   fclose($output);
   exit;
+}
+
+/**
+ * Enable stock management for a product
+ */
+function wc_inventory_insights_enable_stock_management()
+{
+  if (!wp_verify_nonce($_POST['nonce'], 'wc_inventory_insights_nonce')) {
+    wp_die('Security check failed');
+  }
+
+  if (!current_user_can('manage_woocommerce')) {
+    wp_send_json_error(array('message' => __('You do not have permission to manage products.', 'woocommerce-inventory-insights')));
+    return;
+  }
+
+  $product_id = isset($_POST['product_id']) ? intval($_POST['product_id']) : 0;
+  $stock_quantity = isset($_POST['stock_quantity']) ? intval($_POST['stock_quantity']) : 0;
+
+  if (!$product_id) {
+    wp_send_json_error(array('message' => __('Invalid product ID.', 'woocommerce-inventory-insights')));
+    return;
+  }
+
+  $product = wc_get_product($product_id);
+  if (!$product) {
+    wp_send_json_error(array('message' => __('Product not found.', 'woocommerce-inventory-insights')));
+    return;
+  }
+
+  // Enable stock management
+  $product->set_manage_stock(true);
+  $product->set_stock_quantity($stock_quantity);
+  $product->set_stock_status($stock_quantity > 0 ? 'instock' : 'outofstock');
+  $product->save();
+
+  wp_send_json_success(array(
+    'message' => __('Stock management enabled successfully.', 'woocommerce-inventory-insights'),
+    'stock_quantity' => $stock_quantity
+  ));
 }

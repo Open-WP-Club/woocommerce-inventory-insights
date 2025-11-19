@@ -852,6 +852,83 @@ jQuery(document).ready(function($) {
     }
     
     /**
+     * Handle enable stock management button clicks
+     */
+    $(document).on('click', '.enable-stock-btn', function(e) {
+        e.preventDefault();
+        var $btn = $(this);
+        var productId = $btn.data('product-id');
+        var $row = $btn.closest('tr');
+        var productName = $row.find('strong').first().text();
+
+        // Prompt for stock quantity
+        var stockQty = prompt('Enable stock management for "' + productName + '"\n\nEnter initial stock quantity:', '0');
+
+        // User cancelled
+        if (stockQty === null) {
+            return;
+        }
+
+        // Validate input
+        stockQty = parseInt(stockQty);
+        if (isNaN(stockQty) || stockQty < 0) {
+            alert('Please enter a valid stock quantity (0 or greater).');
+            return;
+        }
+
+        // Disable button and show loading
+        var originalText = $btn.text();
+        $btn.prop('disabled', true).text('Enabling...');
+
+        // Send AJAX request
+        $.post(wcInventoryInsights.ajaxurl, {
+            action: 'wc_inventory_insights_enable_stock',
+            product_id: productId,
+            stock_quantity: stockQty,
+            nonce: wcInventoryInsights.nonce
+        })
+        .done(function(response) {
+            if (response.success) {
+                // Update the row to show stock is now managed
+                $row.attr('data-managing-stock', '1');
+
+                // Update stock quantity cell
+                var $stockCell = $row.find('td').eq(5); // Current Stock column
+                $stockCell.html('<span>' + stockQty + '</span>');
+
+                // Update stock needed cell if it exists
+                var minStock = $('#min_stock').val();
+                if (minStock && minStock !== '') {
+                    var $neededCell = $row.find('td').eq(6); // Stock Needed column
+                    var needed = Math.max(0, parseInt(minStock) - stockQty);
+                    if (needed > 0) {
+                        $neededCell.html('<span class="stock-needed">+' + needed + '</span>');
+                    } else {
+                        $neededCell.html('-');
+                    }
+                }
+
+                // Remove the enable button
+                $btn.remove();
+
+                // Show success message
+                var $success = $('<div class="notice notice-success is-dismissible" style="margin: 10px 0;"><p>Stock management enabled for "' + escapeHtml(productName) + '" with initial quantity: ' + stockQty + '</p></div>');
+                $('#search-results').prepend($success);
+                setTimeout(function() {
+                    $success.fadeOut(300, function() { $(this).remove(); });
+                }, 3000);
+            } else {
+                alert('Error: ' + (response.data.message || 'Failed to enable stock management.'));
+                $btn.prop('disabled', false).text(originalText);
+            }
+        })
+        .fail(function() {
+            alert('Failed to enable stock management. Please try again.');
+            $btn.prop('disabled', false).text(originalText);
+        });
+    });
+
+    /**
      * Debug logging
      */
     function debugLog(message, data) {

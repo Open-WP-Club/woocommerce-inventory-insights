@@ -225,6 +225,25 @@
   text-align: center;
 }
 
+.stock-not-managed {
+  color: #f0b849;
+  font-weight: 600;
+  font-style: italic;
+}
+
+/* Enable Stock Button */
+.enable-stock-btn {
+  background: #f0b849;
+  border-color: #f0b849;
+  color: #fff;
+  margin-right: 5px;
+}
+
+.enable-stock-btn:hover {
+  background: #e09b2b;
+  border-color: #e09b2b;
+}
+
 /* No Results Message */
 .no-results {
   text-align: center;

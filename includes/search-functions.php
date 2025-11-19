@@ -77,6 +77,7 @@ function wc_inventory_insights_search_products($filter_type, $filter_value, $min
     if (!$product) continue;
 
     $stock_quantity = $product->get_stock_quantity();
+    $managing_stock = $product->get_manage_stock();
     // Use 0 for products without stock management
     $display_stock_quantity = $stock_quantity !== null ? $stock_quantity : 0;
 
@@ -94,6 +95,7 @@ function wc_inventory_insights_search_products($filter_type, $filter_value, $min
         'name' => $product->get_name(),
         'sku' => $product->get_sku(),
         'stock_quantity' => $display_stock_quantity,
+        'managing_stock' => $managing_stock,
         'categories' => $categories_list,
         'image_url' => wp_get_attachment_image_url($product->get_image_id(), 'thumbnail'),
         'edit_url' => get_edit_post_link($product->get_id()),
